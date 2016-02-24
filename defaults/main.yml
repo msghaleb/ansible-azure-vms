@@ -1,0 +1,9 @@
+---
+
+user_name             : "{{ azure_role_assignment_user_name | default('test.user') }}"
+resource_group_name   : "{{ azure_role_assignment_resource_group_name | default('ghaleb2') }}"
+subscription_id       : "{{ azure_role_assignment_subscription_id | default('a07a55g4-9313-4ef8-94f8-e999b3f6f64g') }}"
+tenant_domain         : "{{ azure_role_assignment_tenant_domain | default('AnsibleDirectory.onmicrosoft.com') }}"
+role_definition_name  : "{{ azure_role_assignment_role_definition_name | default('Reader') }}"
+client_id             : "{{ azure_role_assignment_client_id | default('6359f1g62-6543-6789-124f-398763x98112') }}"
+client_secret         : "{{ azure_role_assignment_client_secret | default('HhCDbhsjkuHGiNhe+RE4aQsdjjrdof8cSd/q8F/iEDhx=') }}"
