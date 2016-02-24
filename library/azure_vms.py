@@ -96,8 +96,12 @@ class AzureVMs():
         self.virtual_machine_storage_name = self.module.params["virtual_machine_storage_name"]
         self.virtual_machine_customdata = self.module.params["virtual_machine_customdata"]
         self.virtual_machine_nic = self.module.params["virtual_machine_nic"]
-        self.vault_name = self.module.params["vault_name"]
-        self.winrm_certificate_url = self.module.params["winrm_certificate_url"]
+        self.security_group = self.module.params["security_group"]
+        self.virtual_network_name = self.module.params["virtual_network_name"]
+        self.subnet_name = self.module.params["subnet_name"]
+        self.public_ip_name = self.module.params["public_ip_name"]
+        #self.vault_name = self.module.params["vault_name"]
+        #self.winrm_certificate_url = self.module.params["winrm_certificate_url"]
         self.location = self.module.params["location"]
         self.resource_group_name = self.module.params["resource_group_name"]
         self.state = self.module.params["state"]
@@ -209,7 +213,7 @@ class AzureVMs():
                          'Accept' : 'application/json', "content-type": "application/json" }
 
     def create_vm(self):
-        #https://msdn.microsoft.com/en-us/library/azure/dn906887.aspx
+        #https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
         self.vm_login()
         payload = {
                       "id":"/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Compute/virtualMachines/{}".format(self.subscription_id, self.resource_group_name, self.virtual_machine_name),
@@ -240,7 +244,7 @@ class AzureVMs():
                           "computerName":"{}".format(self.virtual_machine_name),
                           "adminUsername":"{}".format(self.virtual_machine_username),
                           "adminPassword":"{}".format(self.virtual_machine_password),
-                          #"customData":"{}".format(self.virtual_machine_customdata),
+                          "customData":"{}".format(self.virtual_machine_customdata),
                           "windowsConfiguration": {
                             "provisionVMAgent":True,
                             "winRM": {
@@ -291,7 +295,83 @@ class AzureVMs():
                 print('Code: ', response_code)
                 print('Message: ', response_msg)
                 print(response_json)
-        self.module.exit_json(msg="Role Assignment Created.", changed=True)
+        self.module.exit_json(msg="The VM has been Created.", changed=True)
+
+    def create_public_ip(self):
+        #https://msdn.microsoft.com/en-us/library/mt163590.aspx
+        self.vm_login()
+        payload = {
+                   "location": "{}".format(self.location),
+                   "properties": {
+                      "publicIPAllocationMethod": "Dynamic",
+                      "dnsSettings": {
+                        "domainNameLabel": "{}".format(self.virtual_machine_name) #,
+                        #"reverseFqdn": "contoso.com."
+                      }
+                   }
+                }
+        payload = json.dumps(payload)
+        url = self.management_url + "/resourceGroups/{}/providers/Microsoft.Network/publicIPAddresses/{}?{}".format(self.resource_group_name, self.public_ip_name, self.azure_version)
+        #print (payload)
+        try:
+            r = open_url(url, method="put", headers=self.headers ,data=payload)
+        except urllib2.HTTPError, err:
+            response_code = err.getcode()
+            response_msg = err.read()
+            response_json = json.loads(response_msg)
+            if response_json.get("error", False) and "already exists" in response_json.get("error").get("message",{}):#.get("value"):
+                self.module.exit_json(msg="The Public IP Address already exists.", changed=False)
+            else:
+                error_msg = response_json.get("error").get("message")
+                self.module.fail_json(msg="Error happend while trying to create the Public IP Address. Error code='{}' msg='{}'".format(response_code, error_msg))
+                print('Code: ', response_code)
+                print('Message: ', response_msg)
+                print(response_json)
+        #self.module.exit_json(msg="Role Assignment Created.", changed=True)
+        #return True
+    def create_nic(self):
+        #https://msdn.microsoft.com/en-us/library/mt163668.aspx
+        self.vm_login()
+        payload = {
+                       "location":"{}".format(self.location),
+                       "properties":{
+                          "networkSecurityGroup":{
+                             "id":"/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Network/networkSecurityGroups/{}".format(self.subscription_id, self.resource_group_name, self.security_group)
+                          },
+                          "ipConfigurations":[
+                             {
+                                "name":"{}".format(self.virtual_machine_nic),
+                                "properties":{
+                                   "subnet":{
+                                      "id":"/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Network/virtualNetworks/{}/subnets/{}".format(self.subscription_id, self.resource_group_name, self.virtual_network_name, self.subnet_name)
+                                   },
+                                   "privateIPAllocationMethod":"Dynamic",
+                                   "publicIPAddress":{
+                                      "id":"/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Network/publicIPAddresses/{}".format(self.subscription_id, self.resource_group_name, self.public_ip_name)
+                                   },
+                                }
+                             }
+                          ],
+                       }
+                }
+        payload = json.dumps(payload)
+        url = self.management_url + "/resourceGroups/{}/providers/Microsoft.Network/networkInterfaces/{}?{}".format(self.resource_group_name, self.virtual_machine_nic, self.azure_version)
+        #print (payload)
+        try:
+            r = open_url(url, method="put", headers=self.headers ,data=payload)
+        except urllib2.HTTPError, err:
+            response_code = err.getcode()
+            response_msg = err.read()
+            response_json = json.loads(response_msg)
+            if response_json.get("error", False) and "The role assignment already exists" in response_json.get("error").get("message",{}):#.get("value"):
+                self.module.exit_json(msg="The role assignment already exists.", changed=False)
+            else:
+                error_msg = response_json.get("error").get("message")
+                self.module.fail_json(msg="Error happend while trying to create the role assignment. Error code='{}' msg='{}'".format(response_code, error_msg))
+                print('Code: ', response_code)
+                print('Message: ', response_msg)
+                print(response_json)
+        #self.module.exit_json(msg="Role Assignment Created.", changed=True)
 
     def main(self):
         if self.state == "present":
@@ -309,7 +389,10 @@ class AzureVMs():
 
             #self.principalId = self.get_user_id()
             #self.role_definition_id = self.get_role_definition()
+            self.create_public_ip()
+            self.create_nic()
             self.create_vm()
+
 
             #print upn_name
 
@@ -325,6 +408,7 @@ def main():
             #principalId=dict(default=None, alias="principal_id", type="str", required=False),
             #role_definition_name=dict(default=None, type="str", required=True),
             #role_definition_id=dict(default=None, type="str", required=True),
+            state=dict(default="present", choices=["absent", "present"]),
             virtual_machine_name=dict(default=None, type="str", required=True),
             virtual_machine_username=dict(default=None, type="str", required=True),
             virtual_machine_password=dict(default=None, type="str", no_log=True, required=True),
@@ -336,11 +420,14 @@ def main():
             virtual_machine_os_disk_name=dict(default="myosdisk1", type="str"),
             virtual_machine_storage_name=dict(default="mystorage1", type="str"),
             virtual_machine_customdata=dict(default="", type="str"),
-            virtual_machine_nic=dict(default="mynic1", type="str"),
-            vault_name=dict(default=None, type="str", required=True),
-            winrm_certificate_url=dict(default=None, required=True, type="str"),
+            virtual_machine_nic=dict(default=None, type="str", required=True),
+            security_group=dict(default=None, type="str", required=True),
+            virtual_network_name=dict(default=None, type="str", required=True),
+            subnet_name=dict(default=None, type="str", required=True),
+            public_ip_name=dict(default=None, type="str", required=True),
+            #vault_name=dict(default=None, type="str", required=True),
+            #winrm_certificate_url=dict(default=None, required=True, type="str"),
             location=dict(default=None, required=True, type="str"),
-            state=dict(default="present", choices=["absent", "present"]),
             tenant_domain = dict(default=None, type="str", required=True),
             resource_group_name=dict(default=None, type="str", required=True),
             subscription_id=dict(default=None, type="str", required=False),

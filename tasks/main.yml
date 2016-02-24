@@ -1,6 +1,6 @@
 ---
 
-- name: Azure AD role assignment
+- name: Azure AD VMS
   azure_role_assignment:
     user_name             : "{{ azure_vms_user_name | default(omit) }}"
     resource_group_name   : "{{ azure_role_assignment_resource_group_name | default(omit) }}"

@@ -1,2 +1,2 @@
-# ansible-azure-role-assignment
-Ansible role for managing Azure Role Assignments
+# ansible-azure-VMs
+Ansible role for managing Azure Virtual Machines
