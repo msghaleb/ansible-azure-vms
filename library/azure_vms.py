@@ -482,8 +482,11 @@ class AzureVMs():
 
     def main(self):
         if self.state == "present":
-            if not self.virtual_machine_source_image and not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer == "None":
+            if not self.virtual_machine_source_image and not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer:
                 self.module.exit_json(msg="You need to either specify a source image URL OR a Publisher & Offer & Sku. In your case they are all not specified", changed=False)
+
+            elif self.virtual_machine_source_image and self.virtual_machine_image_publisher and self.virtual_machine_image_sku and self.virtual_machine_image_offer:
+                self.module.exit_json(msg="You need to either specify a source image URL OR a Publisher & Offer & Sku. In your case you have specified all of them", changed=False)
 
             elif not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer:
                 self.create_public_ip()

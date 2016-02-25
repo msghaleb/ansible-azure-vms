@@ -1,9 +1,37 @@
 ---
 
-user_name             : "{{ azure_role_assignment_user_name | default('test.user') }}"
-resource_group_name   : "{{ azure_role_assignment_resource_group_name | default('ghaleb2') }}"
-subscription_id       : "{{ azure_role_assignment_subscription_id | default('a07a55g4-9313-4ef8-94f8-e999b3f6f64g') }}"
-tenant_domain         : "{{ azure_role_assignment_tenant_domain | default('AnsibleDirectory.onmicrosoft.com') }}"
-role_definition_name  : "{{ azure_role_assignment_role_definition_name | default('Reader') }}"
-client_id             : "{{ azure_role_assignment_client_id | default('6359f1g62-6543-6789-124f-398763x98112') }}"
-client_secret         : "{{ azure_role_assignment_client_secret | default('HhCDbhsjkuHGiNhe+RE4aQsdjjrdof8cSd/q8F/iEDhx=') }}"
+virtual_machine_username        : "{{ azure_vms_virtual_machine_username | default(omit) }}"
+virtual_machine_password        : "{{ azure_vms_virtual_machine_password | default(omit) }}" # The password has to be complex (letters BIG/small , numbers, ..etc)
+virtual_machine_name            : "{{ azure_vms_virtual_machine_name | default(omit) }}"
+location                        : "{{ azure_vms_location | default('westeurope') }}" #The location e.g. westeurope
+virtual_machine_size            : "{{ azure_vms_virtual_machine_size | default('Standard_A1') }}" # The VM size e.g. Standard_A1
+virtual_machine_storage_name    : "{{ azure_vms_virtual_machine_storage_name | default(omit) }}" #The storage account name e.g. azuresandboxsa
+virtual_network_name            : "{{ azure_vms_virtual_network_name | default(omit) }}" #The virtual Network name e.g. azuresandboxvn
+security_group                  : "{{ azure_vms_security_group | default(omit) }}" #The security group name to create the NIC
+
+#SET1
+#https://azure.microsoft.com/en-us/documentation/articles/resource-groups-vm-searching/
+virtual_machine_image_sku       : "{{ azure_vms_virtual_machine_image_sku | default(omit) }}" #e.g WindowsServerEssentials
+virtual_machine_image_offer     : "{{ azure_vms_virtual_machine_image_offer | default(omit) }}" #e.g. WindowsServerEssentials
+virtual_machine_image_publisher : "{{ azure_vms_virtual_machine_image_publisher | default(omit) }}" #e.g. MicrosoftWindowsServerEssentials
+virtual_machine_image_version   : "{{ azure_vms_virtual_machine_image_version | default('latest') }}"
+#SET2
+virtual_machine_source_image    : "{{ azure_vms_virtual_machine_source_image | default(omit) }}" #e.g. https://azure123tgdf.blob.core.windows.net/vhds/image.vhd this MUST be in the same resource group as the VM itself.
+# either specify SET1 or SET2, both sets are mutually exclusive
+
+resource_group_name             : "{{ azure_vms_resource_group_name | default(omit) }}"
+subscription_id                 : "{{ azure_vms_subscription_id | default(omit) }}" #e.g. a07a55g4-9313-4ef8-94f8-e999b3f6f64g
+tenant_domain                   : "{{ azure_vms_tenant_domain | default(omit) }}" #e.g. AnsibleDirectory.onmicrosoft.com
+client_id                       : "{{ azure_vms_client_id | default(omit) }}" #e.g. 6359f1g62-6543-6789-124f-398763x98112
+client_secret                   : "{{ azure_vms_client_secret | default(omit) }}" #e.g. HhCDbhsjkuHGiNhe+RE4aQsdjjrdof8cSd/q8F/iEDhx=
+
+#The following vars are not required
+state                           : "{{ azure_vms_state | default('present') }}" #choices are abcent or present, abcent is not yet supported
+virtual_machine_os_disk_name    : "{{ azure_vms_virtual_machine_os_disk_name | default(omit) }}" #will take the VM name by default
+virtual_machine_customdata      : "{{ azure_vms_virtual_machine_customdata | default(omit) }}" #bootstrap, not working as it should (M$ schuld)
+virtual_machine_nic             : "{{ azure_vms_virtual_machine_nic | default(omit) }}" # will take the VM by default
+subnet_name                     : "{{ azure_vms_subnet_name | default(omit) }}" # will be "default" by default ;)
+public_ip_name                  : "{{ azure_vms_public_ip_name | default(omit) }}" # will take the VM name by default
+management_url                  : "{{ azure_vms_management_url | default(omit) }}" # will be specified in the module
+login_url                       : "{{ azure_vms_login_url | default(omit) }}" # will be specified in the module
+graph_url                       : "{{ azure_vms_graph_url | default(omit) }}" # will be specified in the module

@@ -1,11 +1,13 @@
 ---
 
 - name: Azure AD VMS
-  azure_role_assignment:
-    user_name             : "{{ azure_vms_user_name | default(omit) }}"
-    resource_group_name   : "{{ azure_role_assignment_resource_group_name | default(omit) }}"
-    tenant_domain         : "{{ azure_role_assignment_tenant_domain | default(omit) }}"
-    subscription_id       : "{{ azure_role_assignment_subscription_id | default(omit) }}"
-    role_definition_name  : "{{ azure_role_assignment_role_definition_name | default(omit) }}"
-    client_id             : "{{ azure_role_assignment_client_id | default(omit) }}"
-    client_secret         : "{{ azure_role_assignment_client_secret | default(omit) }}"
+  azure_vms:
+      virtual_machine_username        : "{{ azure_vms_virtual_machine_username }}"
+      virtual_machine_password        : "{{ azure_vms_virtual_machine_password }}" # The password has to be complex (letters BIG/small , numbers, ..etc)
+      virtual_machine_name            : "{{ azure_vms_virtual_machine_name }}"
+      location                        : "{{ azure_vms_location }}" #The location e.g. westeurope
+      virtual_machine_storage_name    : "{{ azure_vms_virtual_machine_storage_name }}" #The storage account name e.g. azuresandboxsa
+      virtual_network_name            : "{{ azure_vms_virtual_network_name }}" #The virtual Network name e.g. azuresandboxvn
+      security_group                  : "{{ azure_vms_security_group }}" #The security group name to create the NIC
+      virtual_machine_source_image    : "{{ azure_vms_virtual_machine_source_image }}" #e.g. https://azure123tgdf.blob.core.windows.net/vhds/image.vhd this MUST be in the same resource group as the VM itself.
+      resource_group_name             : "{{ azure_vms_resource_group_name }}"
