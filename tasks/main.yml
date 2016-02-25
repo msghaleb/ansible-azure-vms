@@ -11,3 +11,5 @@
       security_group                  : "{{ azure_vms_security_group }}" #The security group name to create the NIC
       virtual_machine_source_image    : "{{ azure_vms_virtual_machine_source_image }}" #e.g. https://azure123tgdf.blob.core.windows.net/vhds/image.vhd this MUST be in the same resource group as the VM itself.
       resource_group_name             : "{{ azure_vms_resource_group_name }}"
+      tenant_domain                   : "{{ azure_vms_tenant_domain }}"
+      subscription_id                 : "{{ azure_vms_subscription_id }}"
