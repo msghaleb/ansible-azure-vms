@@ -83,7 +83,6 @@ tasks:
 class AzureVMs():
     def __init__(self, module):
         self.module = module
-        #self.user_name = self.module.params["user_name"]
         self.virtual_machine_name = self.module.params["virtual_machine_name"]
         self.virtual_machine_username = self.module.params["virtual_machine_username"]
         self.virtual_machine_password = self.module.params["virtual_machine_password"]
@@ -92,34 +91,48 @@ class AzureVMs():
         self.virtual_machine_image_offer = self.module.params["virtual_machine_image_offer"]
         self.virtual_machine_image_sku = self.module.params["virtual_machine_image_sku"]
         self.virtual_machine_image_version = self.module.params["virtual_machine_image_version"]
+
         self.virtual_machine_os_disk_name = self.module.params["virtual_machine_os_disk_name"]
+        if not self.virtual_machine_os_disk_name:
+            self.virtual_machine_os_disk_name = "{}".format(self.virtual_machine_name)
+
         self.virtual_machine_storage_name = self.module.params["virtual_machine_storage_name"]
+
         self.virtual_machine_customdata = self.module.params["virtual_machine_customdata"]
+        if not self.virtual_machine_customdata:
+            self.virtual_machine_customdata = "bmV3LWl0ZW0gYzpcZGlyMSAtaXRlbXR5cGUgZGlyZWN0b3J5" #This is a PS script to create a folder in the C drive
+
         self.virtual_machine_nic = self.module.params["virtual_machine_nic"]
+        if not self.virtual_machine_nic:
+            self.virtual_machine_nic = "{}".format(self.virtual_machine_name)
+
         self.security_group = self.module.params["security_group"]
         self.virtual_network_name = self.module.params["virtual_network_name"]
         self.subnet_name = self.module.params["subnet_name"]
+
         self.public_ip_name = self.module.params["public_ip_name"]
-        #self.vault_name = self.module.params["vault_name"]
-        #self.winrm_certificate_url = self.module.params["winrm_certificate_url"]
+        if not self.public_ip_name:
+            self.public_ip_name = "{}".format(self.virtual_machine_name)
+
+        self.virtual_machine_source_image = self.module.params["virtual_machine_source_image"]
+
         self.location = self.module.params["location"]
         self.resource_group_name = self.module.params["resource_group_name"]
         self.state = self.module.params["state"]
-        #self.principalId = None
-        #self.role_assignment_id = uuid.uuid1()
-        #self.role_definition_id = None
         self.subscription_id = self.module.params["subscription_id"]
         self.tenant_domain = self.module.params["tenant_domain"]
         self.client_id = self.module.params["client_id"]
         self.client_secret = self.module.params["client_secret"]
+
         self.graph_url = self.module.params["graph_url"]
-        self.management_url = self.module.params["management_url"]
-        self.login_url  = self.module.params["login_url"]
-        #self.role_definition_name = self.module.params["role_definition_name"]
         if not self.graph_url:
             self.graph_url = "https://graph.windows.net/{}".format(self.tenant_domain)
+
+        self.management_url = self.module.params["management_url"]
         if not self.management_url:
             self.management_url = "https://management.azure.com/subscriptions/{}".format(self.subscription_id)
+
+        self.login_url  = self.module.params["login_url"]
         if not self.login_url:
             self.login_url = "https://login.windows.net/{}/oauth2/token?api-version=1.0".format(self.tenant_domain)
 
@@ -212,7 +225,7 @@ class AzureVMs():
         self.headers = { 'Authorization' : '{} {}'.format(token_type, token),
                          'Accept' : 'application/json', "content-type": "application/json" }
 
-    def create_vm(self):
+    def create_vm_from_image(self):
         #https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
         self.vm_login()
         payload = {
@@ -225,19 +238,23 @@ class AzureVMs():
                           "vmSize":"{}".format(self.virtual_machine_size)
                         },
                         "storageProfile": {
-                          "imageReference": {
-                            "publisher":"{}".format(self.virtual_machine_image_publisher),
-                            "offer":"{}".format(self.virtual_machine_image_offer),
-                            "sku":"{}".format(self.virtual_machine_image_sku),
-                            "version":"{}".format(self.virtual_machine_image_version)
-                          },
+                          #"imageReference": {
+                            #"publisher":"{}".format(self.virtual_machine_image_publisher),
+                            #"offer":"{}".format(self.virtual_machine_image_offer),
+                            #"sku":"{}".format(self.virtual_machine_image_sku),
+                            #"version":"{}".format(self.virtual_machine_image_version)
+                          #},
                           "osDisk": {
+                            "osType": "Windows",
                             "name":"{}".format(self.virtual_machine_os_disk_name),
+                            "createOption": "FromImage",
+                            "image": {
+                              "uri": "{}".format(self.virtual_machine_source_image)
+                            },
                             "vhd": {
                               "uri":"http://{}.blob.core.windows.net/vhds/{}.vhd".format(self.virtual_machine_storage_name, self.virtual_machine_os_disk_name)
                             },
-                            "caching":"ReadWrite",
-                            "createOption":"FromImage"
+                            "caching":"ReadWrite"
                           },
                         },
                         "osProfile": {
@@ -296,6 +313,96 @@ class AzureVMs():
                 print('Message: ', response_msg)
                 print(response_json)
         self.module.exit_json(msg="The VM has been Created.", changed=True)
+
+    def create_vm(self):
+        #https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+        self.vm_login()
+        payload = {
+                      "id":"/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Compute/virtualMachines/{}".format(self.subscription_id, self.resource_group_name, self.virtual_machine_name),
+                      "name":"{}".format(self.virtual_machine_name),
+                      "type":"Microsoft.Compute/virtualMachines",
+                      "location":"{}".format(self.location),
+                      "properties": {
+                        "hardwareProfile": {
+                          "vmSize":"{}".format(self.virtual_machine_size)
+                        },
+                        "storageProfile": {
+                          "imageReference": {
+                            "publisher":"{}".format(self.virtual_machine_image_publisher),
+                            "offer":"{}".format(self.virtual_machine_image_offer),
+                            "sku":"{}".format(self.virtual_machine_image_sku),
+                            "version":"{}".format(self.virtual_machine_image_version)
+                          },
+                          "osDisk": {
+                            #"osType": "Windows",
+                            "name":"{}".format(self.virtual_machine_os_disk_name),
+                            "createOption": "FromImage",
+                            #"image": {
+                            #  "uri": "{}".format(self.virtual_machine_source_image)
+                            #},
+                            "vhd": {
+                              "uri":"http://{}.blob.core.windows.net/vhds/{}.vhd".format(self.virtual_machine_storage_name, self.virtual_machine_os_disk_name)
+                            },
+                            "caching":"ReadWrite"
+                          },
+                        },
+                        "osProfile": {
+                          "computerName":"{}".format(self.virtual_machine_name),
+                          "adminUsername":"{}".format(self.virtual_machine_username),
+                          "adminPassword":"{}".format(self.virtual_machine_password),
+                          "customData":"{}".format(self.virtual_machine_customdata),
+                          "windowsConfiguration": {
+                            "provisionVMAgent":True,
+                            "winRM": {
+                              "listeners": [ {
+                                "protocol": "http",
+                                #"certificateUrl": "{}".format(self.winrm_certificate_url)
+                              } ]
+                            },
+                            #"additionalUnattendContent": {
+                            #  "pass":"oobesystem",
+                            #  "component":"Microsoft-Windows-Shell-Setup",
+                            #  "settingName":"FirstLogonCommands|AutoLogon",
+                            #  "content":"<XML unattend content>"
+                            #},
+                            #"enableAutomaticUpdates":False
+                          },
+                          #"secrets":[ {
+                          #   "sourceVault": {
+                          #     "id": "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.KeyVault/vaults/{}".format(self.subscription_id, self.resource_group_name, self.vault_name)
+                          #   },
+                          #   "vaultCertificates": [ {
+                          #     "certificateUrl": "{}".format(self.winrm_certificate_url),
+                          #     "certificateStore": "My"
+                          #   } ]
+                          # } ]
+                        },
+                        "networkProfile": {
+                          "networkInterfaces": [ {
+                            "id":"/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Network/networkInterfaces/{}".format(self.subscription_id, self.resource_group_name, self.virtual_machine_nic)
+                          } ]
+                        }
+                      }
+                }
+        payload = json.dumps(payload)
+        url = self.management_url + "/resourceGroups/{}/providers/Microsoft.Compute/virtualMachines/{}?validating=true&{}".format(self.resource_group_name, self.virtual_machine_name, self.azure_version)
+        #print (payload)
+        try:
+            r = open_url(url, method="put", headers=self.headers ,data=payload)
+        except urllib2.HTTPError, err:
+            response_code = err.getcode()
+            response_msg = err.read()
+            response_json = json.loads(response_msg)
+            if response_json.get("error", False) and "The role assignment already exists" in response_json.get("error").get("message",{}):#.get("value"):
+                self.module.exit_json(msg="The role assignment already exists.", changed=False)
+            else:
+                error_msg = response_json.get("error").get("message")
+                self.module.fail_json(msg="Error happend while trying to create the role assignment. Error code='{}' msg='{}'".format(response_code, error_msg))
+                print('Code: ', response_code)
+                print('Message: ', response_msg)
+                print(response_json)
+        self.module.exit_json(msg="The VM has been Created.", changed=True)
+
 
     def create_public_ip(self):
         #https://msdn.microsoft.com/en-us/library/mt163590.aspx
@@ -375,29 +482,25 @@ class AzureVMs():
 
     def main(self):
         if self.state == "present":
-        #    if self.name.find('@')==-1 or self.name.find('.')==-1:
-        #        self.module.fail_json(msg="Please make sure to enter the username (UPN) in this form e.g. username@tenant_domain.onmicrosoft.com")
-        #    if self.password == None:
-        #        self.module.fail_json(msg="You can't create a user without specifing a password!")
-        #    if self.display_name == None:
-        #        i = self.name.split('@', 1)
-        #        self.display_name = i[0]
-        #    if self.mail_nick_name == None:
-        #        i = self.name.split('@', 1)
-        #        self.mail_nick_name = i[0]
+            if not self.virtual_machine_source_image and not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer == "None":
+                self.module.exit_json(msg="You need to either specify a source image URL OR a Publisher & Offer & Sku. In your case they are all not specified", changed=False)
 
+            elif not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer:
+                self.create_public_ip()
+                self.create_nic()
+                self.create_vm_from_image()
 
-            #self.principalId = self.get_user_id()
-            #self.role_definition_id = self.get_role_definition()
-            self.create_public_ip()
-            self.create_nic()
-            self.create_vm()
+            elif not self.virtual_machine_source_image:
+                self.create_public_ip()
+                self.create_nic()
+                self.create_vm()
 
-
+            else:
+                self.module.exit_json(msg="You need to either specify a source image URL or a Publisher & Offer & Sku. Something is missing", changed=False)
             #print upn_name
 
         elif self.state == "absent":
-            self.module.exit_json(msg="Deletion is not supported.", changed=False)
+            self.module.exit_json(msg="Deletion is not yet supported.", changed=False)
             #self.login()
             #self.delete_resource_group()
 
@@ -413,18 +516,19 @@ def main():
             virtual_machine_username=dict(default=None, type="str", required=True),
             virtual_machine_password=dict(default=None, type="str", no_log=True, required=True),
             virtual_machine_size=dict(default="Standard_A0", type="str"),
-            virtual_machine_image_publisher=dict(default=None, required=True, type="str"),
-            virtual_machine_image_offer=dict(default=None, required=True, type="str"),
-            virtual_machine_image_sku=dict(default=None, required=True, type="str"),
+            virtual_machine_image_publisher=dict(default=None, required=False, type="str"),
+            virtual_machine_image_offer=dict(default=None, required=False, type="str"),
+            virtual_machine_image_sku=dict(default=None, required=False, type="str"),
             virtual_machine_image_version=dict(default="latest", type="str"),
-            virtual_machine_os_disk_name=dict(default="myosdisk1", type="str"),
-            virtual_machine_storage_name=dict(default="mystorage1", type="str"),
+            virtual_machine_os_disk_name=dict(type="str"),
+            virtual_machine_storage_name=dict(type="str"),
             virtual_machine_customdata=dict(default="", type="str"),
-            virtual_machine_nic=dict(default=None, type="str", required=True),
+            virtual_machine_nic=dict(default=None, type="str", required=False),
             security_group=dict(default=None, type="str", required=True),
             virtual_network_name=dict(default=None, type="str", required=True),
-            subnet_name=dict(default=None, type="str", required=True),
-            public_ip_name=dict(default=None, type="str", required=True),
+            subnet_name=dict(default="Default", type="str", required=False),
+            public_ip_name=dict(default=None, type="str", required=False),
+            virtual_machine_source_image=dict(default=None, type="str", required=False),
             #vault_name=dict(default=None, type="str", required=True),
             #winrm_certificate_url=dict(default=None, required=True, type="str"),
             location=dict(default=None, required=True, type="str"),
