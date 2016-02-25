@@ -316,12 +316,9 @@ class AzureVMs():
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the role assignment. Error code='{}' msg='{}'".format(response_code, error_msg))
-                print('Code: ', response_code)
-                print('Message: ', response_msg)
-                print(response_json)
-        self.module.exit_json(msg="The VM has been Created.", changed=True)
+        self.module.exit_json(msg="The VM has been Created.", public_dns_name=self.public_dns_name, changed=True)
 
-    def create_vm(self):
+    def create_vm(self, image=None):
         #https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
         self.vm_login()
         payload = {
@@ -405,9 +402,6 @@ class AzureVMs():
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the VM. Error code='{}' msg='{}'".format(response_code, error_msg))
-                print('Code: ', response_code)
-                print('Message: ', response_msg)
-                print(response_json)
         self.module.exit_json(msg="The VM has been Created.", public_dns_name=self.public_dns_name, changed=True)
 
     def create_public_ip(self):
@@ -437,9 +431,6 @@ class AzureVMs():
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the Public IP Address. Error code='{}' msg='{}'".format(response_code, error_msg))
-                print('Code: ', response_code)
-                print('Message: ', response_msg)
-                print(response_json)
 	out_put = json.loads(r.read())
 	self.public_dns_name = out_put.get("properties").get("dnsSettings").get("fqdn")
 
@@ -483,9 +474,7 @@ class AzureVMs():
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the VM NIC. Error code='{}' msg='{}'".format(response_code, error_msg))
-                print('Code: ', response_code)
-                print('Message: ', response_msg)
-                print(response_json)
+
 
     def main(self):
         if self.state == "present":
@@ -497,8 +486,8 @@ class AzureVMs():
 
             elif not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer:
                 self.create_public_ip()
-                #self.create_nic()
-                #self.create_vm_from_image()
+                self.create_nic()
+                self.create_vm_from_image()
 
             elif not self.virtual_machine_source_image:
                 self.create_public_ip()
