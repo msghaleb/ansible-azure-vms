@@ -56,13 +56,6 @@ options:
       - Your Azure subscription id
     required: true
     default: null
-
-  role_definition_name:
-    description:
-      - This is the role the user will be assigned on the resource group in question.
-      e.g. Owner, Reader, ..etc.
-    required: true
-    default: null
 '''.format(__version__)
 
 EXAMPLES = '''
@@ -83,8 +76,13 @@ tasks:
 class AzureVMs():
     def __init__(self, module):
         self.module = module
+
         self.virtual_machine_name = self.module.params["virtual_machine_name"]
+        self.virtual_machine_name = self.cleanup_chars(self.virtual_machine_name)
+
         self.virtual_machine_username = self.module.params["virtual_machine_username"]
+        self.virtual_machine_username = self.cleanup_chars(self.virtual_machine_username)
+
         self.virtual_machine_password = self.module.params["virtual_machine_password"]
         self.virtual_machine_size = self.module.params["virtual_machine_size"]
         self.virtual_machine_image_publisher = self.module.params["virtual_machine_image_publisher"]
@@ -95,6 +93,7 @@ class AzureVMs():
         self.virtual_machine_os_disk_name = self.module.params["virtual_machine_os_disk_name"]
         if not self.virtual_machine_os_disk_name:
             self.virtual_machine_os_disk_name = "{}".format(self.virtual_machine_name)
+        self.virtual_machine_os_disk_name = self.cleanup_chars(self.virtual_machine_os_disk_name)
 
         self.virtual_machine_storage_name = self.module.params["virtual_machine_storage_name"]
 
@@ -105,6 +104,7 @@ class AzureVMs():
         self.virtual_machine_nic = self.module.params["virtual_machine_nic"]
         if not self.virtual_machine_nic:
             self.virtual_machine_nic = "{}".format(self.virtual_machine_name)
+        self.virtual_machine_nic = self.cleanup_chars(self.virtual_machine_nic)
 
         self.security_group = self.module.params["security_group"]
         self.virtual_network_name = self.module.params["virtual_network_name"]
@@ -113,6 +113,9 @@ class AzureVMs():
         self.public_ip_name = self.module.params["public_ip_name"]
         if not self.public_ip_name:
             self.public_ip_name = "{}".format(self.virtual_machine_name)
+        self.public_ip_name = self.cleanup_chars(self.public_ip_name)
+
+        self.public_dns_name = ""
 
         self.virtual_machine_source_image = self.module.params["virtual_machine_source_image"]
 
@@ -177,6 +180,10 @@ class AzureVMs():
             return type(data)(map(self.convert, data))
         else:
             return data
+
+    def cleanup_chars(self, old_str):
+        clean_str = ''.join(e for e in old_str if e.isalnum())
+        return clean_str
 
     def user_id_login(self):
         headers = { 'User-Agent': 'ansible-azure-0.0.1', 'Connection': 'keep-alive', 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -393,16 +400,15 @@ class AzureVMs():
             response_code = err.getcode()
             response_msg = err.read()
             response_json = json.loads(response_msg)
-            if response_json.get("error", False) and "The role assignment already exists" in response_json.get("error").get("message",{}):#.get("value"):
+            if response_json.get("error", False) and "The VM already exists" in response_json.get("error").get("message",{}):#.get("value"):
                 self.module.exit_json(msg="The role assignment already exists.", changed=False)
             else:
                 error_msg = response_json.get("error").get("message")
-                self.module.fail_json(msg="Error happend while trying to create the role assignment. Error code='{}' msg='{}'".format(response_code, error_msg))
+                self.module.fail_json(msg="Error happend while trying to create the VM. Error code='{}' msg='{}'".format(response_code, error_msg))
                 print('Code: ', response_code)
                 print('Message: ', response_msg)
                 print(response_json)
-        self.module.exit_json(msg="The VM has been Created.", changed=True)
-
+        self.module.exit_json(msg="The VM has been Created.", public_dns_name=self.public_dns_name, changed=True)
 
     def create_public_ip(self):
         #https://msdn.microsoft.com/en-us/library/mt163590.aspx
@@ -434,8 +440,10 @@ class AzureVMs():
                 print('Code: ', response_code)
                 print('Message: ', response_msg)
                 print(response_json)
-        #self.module.exit_json(msg="Role Assignment Created.", changed=True)
-        #return True
+	out_put = json.loads(r.read())
+	self.public_dns_name = out_put.get("properties").get("dnsSettings").get("fqdn")
+
+
     def create_nic(self):
         #https://msdn.microsoft.com/en-us/library/mt163668.aspx
         self.vm_login()
@@ -470,15 +478,14 @@ class AzureVMs():
             response_code = err.getcode()
             response_msg = err.read()
             response_json = json.loads(response_msg)
-            if response_json.get("error", False) and "The role assignment already exists" in response_json.get("error").get("message",{}):#.get("value"):
+            if response_json.get("error", False) and "The NIC already exists" in response_json.get("error").get("message",{}):#.get("value"):
                 self.module.exit_json(msg="The role assignment already exists.", changed=False)
             else:
                 error_msg = response_json.get("error").get("message")
-                self.module.fail_json(msg="Error happend while trying to create the role assignment. Error code='{}' msg='{}'".format(response_code, error_msg))
+                self.module.fail_json(msg="Error happend while trying to create the VM NIC. Error code='{}' msg='{}'".format(response_code, error_msg))
                 print('Code: ', response_code)
                 print('Message: ', response_msg)
                 print(response_json)
-        #self.module.exit_json(msg="Role Assignment Created.", changed=True)
 
     def main(self):
         if self.state == "present":
@@ -490,8 +497,8 @@ class AzureVMs():
 
             elif not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer:
                 self.create_public_ip()
-                self.create_nic()
-                self.create_vm_from_image()
+                #self.create_nic()
+                #self.create_vm_from_image()
 
             elif not self.virtual_machine_source_image:
                 self.create_public_ip()
