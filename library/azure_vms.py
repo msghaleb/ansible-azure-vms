@@ -419,7 +419,8 @@ class AzureVMs():
         out_put = json.loads(r.read())
         self.public_dns_name = out_put.get("properties").get("dnsSettings").get("fqdn")
         self.public_ip_address = out_put.get("properties").get("ipAddress")
-        self.module.exit_json(msg="The VM has been provisioned.", public_dns_name=self.public_dns_name, public_ip_address=self.public_ip_address, changed=True)
+        self.module.exit_json(msg="The VM has been provisioned successfully.", public_dns_name=self.public_dns_name, public_ip_address=self.public_ip_address, virtual_machine_username=self.virtual_machine_username, changed=True)
+    
     def create_nic(self):
         #https://msdn.microsoft.com/en-us/library/mt163668.aspx
         self.vm_login()

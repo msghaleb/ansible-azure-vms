@@ -28,5 +28,6 @@
 
 - name: provision | set facts for ansible_ssh_host
   set_fact:
-        ansible_ssh_host: "{{ azure_vms.public_ip_address }}"
-        public_dns_name:  "{{ azure_vms.public_dns_name }}"
+        azure_jump_public_ip_address: "{{ azure_vms.public_ip_address }}"
+        azure_jump_public_dns_name:  "{{ azure_vms.public_dns_name }}"
+        azure_jump_username: "{{ azure_vms.virtual_machine_username }}"
