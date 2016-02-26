@@ -473,12 +473,14 @@ class AzureVMs():
                 self.create_public_ip()
                 self.create_nic()
                 self.create_vm_from_image()
+                time.sleep(120)
                 self.get_public_ip()
 
             elif not self.virtual_machine_source_image:
                 self.create_public_ip()
                 self.create_nic()
                 self.create_vm()
+                time.sleep(120)
                 self.get_public_ip()
 
             else:
@@ -539,6 +541,7 @@ import collections # might not be needed
 import json
 import urllib
 import uuid
+import time
 
 # import module snippets
 from ansible.module_utils.basic import *
