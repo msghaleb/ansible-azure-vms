@@ -116,6 +116,7 @@ class AzureVMs():
         self.public_ip_name = self.cleanup_chars(self.public_ip_name)
 
         self.public_dns_name = ""
+        self.public_ip_address = ""
 
         self.virtual_machine_source_image = self.module.params["virtual_machine_source_image"]
 
@@ -183,6 +184,7 @@ class AzureVMs():
 
     def cleanup_chars(self, old_str):
         clean_str = ''.join(e for e in old_str if e.isalnum())
+        clean_str = clean_str[:15]
         return clean_str
 
     def user_id_login(self):
@@ -245,12 +247,6 @@ class AzureVMs():
                           "vmSize":"{}".format(self.virtual_machine_size)
                         },
                         "storageProfile": {
-                          #"imageReference": {
-                            #"publisher":"{}".format(self.virtual_machine_image_publisher),
-                            #"offer":"{}".format(self.virtual_machine_image_offer),
-                            #"sku":"{}".format(self.virtual_machine_image_sku),
-                            #"version":"{}".format(self.virtual_machine_image_version)
-                          #},
                           "osDisk": {
                             "osType": "Windows",
                             "name":"{}".format(self.virtual_machine_os_disk_name),
@@ -274,26 +270,9 @@ class AzureVMs():
                             "winRM": {
                               "listeners": [ {
                                 "protocol": "http",
-                                #"certificateUrl": "{}".format(self.winrm_certificate_url)
                               } ]
                             },
-                            #"additionalUnattendContent": {
-                            #  "pass":"oobesystem",
-                            #  "component":"Microsoft-Windows-Shell-Setup",
-                            #  "settingName":"FirstLogonCommands|AutoLogon",
-                            #  "content":"<XML unattend content>"
-                            #},
-                            #"enableAutomaticUpdates":False
                           },
-                          #"secrets":[ {
-                          #   "sourceVault": {
-                          #     "id": "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.KeyVault/vaults/{}".format(self.subscription_id, self.resource_group_name, self.vault_name)
-                          #   },
-                          #   "vaultCertificates": [ {
-                          #     "certificateUrl": "{}".format(self.winrm_certificate_url),
-                          #     "certificateStore": "My"
-                          #   } ]
-                          # } ]
                         },
                         "networkProfile": {
                           "networkInterfaces": [ {
@@ -304,7 +283,6 @@ class AzureVMs():
                 }
         payload = json.dumps(payload)
         url = self.management_url + "/resourceGroups/{}/providers/Microsoft.Compute/virtualMachines/{}?validating=true&{}".format(self.resource_group_name, self.virtual_machine_name, self.azure_version)
-        #print (payload)
         try:
             r = open_url(url, method="put", headers=self.headers ,data=payload)
         except urllib2.HTTPError, err:
@@ -316,7 +294,7 @@ class AzureVMs():
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the role assignment. Error code='{}' msg='{}'".format(response_code, error_msg))
-        self.module.exit_json(msg="The VM has been Created.", public_dns_name=self.public_dns_name, changed=True)
+        #self.module.exit_json(msg="The VM has been Created.", public_dns_name=self.public_dns_name, public_ip_address=self.public_ip_address, changed=True)
 
     def create_vm(self, image=None):
         #https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
@@ -338,12 +316,8 @@ class AzureVMs():
                             "version":"{}".format(self.virtual_machine_image_version)
                           },
                           "osDisk": {
-                            #"osType": "Windows",
                             "name":"{}".format(self.virtual_machine_os_disk_name),
                             "createOption": "FromImage",
-                            #"image": {
-                            #  "uri": "{}".format(self.virtual_machine_source_image)
-                            #},
                             "vhd": {
                               "uri":"http://{}.blob.core.windows.net/vhds/{}.vhd".format(self.virtual_machine_storage_name, self.virtual_machine_os_disk_name)
                             },
@@ -360,26 +334,9 @@ class AzureVMs():
                             "winRM": {
                               "listeners": [ {
                                 "protocol": "http",
-                                #"certificateUrl": "{}".format(self.winrm_certificate_url)
                               } ]
                             },
-                            #"additionalUnattendContent": {
-                            #  "pass":"oobesystem",
-                            #  "component":"Microsoft-Windows-Shell-Setup",
-                            #  "settingName":"FirstLogonCommands|AutoLogon",
-                            #  "content":"<XML unattend content>"
-                            #},
-                            #"enableAutomaticUpdates":False
                           },
-                          #"secrets":[ {
-                          #   "sourceVault": {
-                          #     "id": "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.KeyVault/vaults/{}".format(self.subscription_id, self.resource_group_name, self.vault_name)
-                          #   },
-                          #   "vaultCertificates": [ {
-                          #     "certificateUrl": "{}".format(self.winrm_certificate_url),
-                          #     "certificateStore": "My"
-                          #   } ]
-                          # } ]
                         },
                         "networkProfile": {
                           "networkInterfaces": [ {
@@ -402,7 +359,7 @@ class AzureVMs():
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the VM. Error code='{}' msg='{}'".format(response_code, error_msg))
-        self.module.exit_json(msg="The VM has been Created.", public_dns_name=self.public_dns_name, changed=True)
+        
 
     def create_public_ip(self):
         #https://msdn.microsoft.com/en-us/library/mt163590.aspx
@@ -431,10 +388,38 @@ class AzureVMs():
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the Public IP Address. Error code='{}' msg='{}'".format(response_code, error_msg))
-	out_put = json.loads(r.read())
-	self.public_dns_name = out_put.get("properties").get("dnsSettings").get("fqdn")
 
-
+    def get_public_ip(self):
+        #https://msdn.microsoft.com/en-us/library/mt163590.aspx
+        self.vm_login()
+        payload = {
+                   "location": "{}".format(self.location),
+                   "properties": {
+                      "publicIPAllocationMethod": "Dynamic",
+                      "dnsSettings": {
+                        "domainNameLabel": "{}".format(self.virtual_machine_name) #,
+                        #"reverseFqdn": "contoso.com."
+                      }
+                   }
+                }
+        payload = json.dumps(payload)
+        url = self.management_url + "/resourceGroups/{}/providers/Microsoft.Network/publicIPAddresses/{}?{}".format(self.resource_group_name, self.public_ip_name, self.azure_version)
+        #print (payload)
+        try:
+            r = open_url(url, method="get", headers=self.headers) # ,data=payload)
+        except urllib2.HTTPError, err:
+            response_code = err.getcode()
+            response_msg = err.read()
+            response_json = json.loads(response_msg)
+            if response_json.get("error", False) and "already exists" in response_json.get("error").get("message",{}):#.get("value"):
+                self.module.exit_json(msg="The Public IP Address already exists.", changed=False)
+            else:
+                error_msg = response_json.get("error").get("message")
+                self.module.fail_json(msg="Error happend while trying to get the Public IP Address. Error code='{}' msg='{}'".format(response_code, error_msg))
+        out_put = json.loads(r.read())
+        self.public_dns_name = out_put.get("properties").get("dnsSettings").get("fqdn")
+        self.public_ip_address = out_put.get("properties").get("ipAddress")
+        self.module.exit_json(msg="The VM has been provisioned.", public_dns_name=self.public_dns_name, public_ip_address=self.public_ip_address, changed=True)
     def create_nic(self):
         #https://msdn.microsoft.com/en-us/library/mt163668.aspx
         self.vm_login()
@@ -475,7 +460,6 @@ class AzureVMs():
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the VM NIC. Error code='{}' msg='{}'".format(response_code, error_msg))
 
-
     def main(self):
         if self.state == "present":
             if not self.virtual_machine_source_image and not self.virtual_machine_image_publisher and not self.virtual_machine_image_sku and not self.virtual_machine_image_offer:
@@ -488,20 +472,21 @@ class AzureVMs():
                 self.create_public_ip()
                 self.create_nic()
                 self.create_vm_from_image()
+                self.get_public_ip()
 
             elif not self.virtual_machine_source_image:
                 self.create_public_ip()
                 self.create_nic()
                 self.create_vm()
+                self.get_public_ip()
 
             else:
                 self.module.exit_json(msg="You need to either specify a source image URL or a Publisher & Offer & Sku. Something is missing", changed=False)
-            #print upn_name
+
 
         elif self.state == "absent":
             self.module.exit_json(msg="Deletion is not yet supported.", changed=False)
-            #self.login()
-            #self.delete_resource_group()
+
 
 def main():
     module = AnsibleModule(

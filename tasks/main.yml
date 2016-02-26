@@ -17,11 +17,15 @@
       client_secret                   : "{{ azure_vms_client_secret }}" #e.g. HhCDbhsjkuHGiNhe+RE4aQsdjjrdof8cSd/q8F/iEDhx=
   register: azure_vms
 
-- debug: var=azure_vms
+#- debug: var=azure_vms
 
-#- name: provision | Waiting for winrm port to open
-#  wait_for:
-#    port="{{ ansible_ssh_port | default('5986') }}"
-#    host="{{ azure_vms.public_dns_name }}"
-#    delay=1
-#    timeout=1200
+- name: provision | Waiting for winrm port to open
+  wait_for:
+    port="{{ ansible_ssh_port | default('5986') }}"
+    host="{{ azure_vms.public_dns_name }}"
+    delay=1
+    timeout=2200
+
+- name: provision | set facts for ansible_ssh_host
+  set_fact:
+        ansible_ssh_host: "{{ azure_vms.public_dns_name }}"
