@@ -185,6 +185,7 @@ class AzureVMs():
     def cleanup_chars(self, old_str):
         clean_str = ''.join(e for e in old_str if e.isalnum())
         clean_str = clean_str[:15]
+        clean_str = clean_str.lower()
         return clean_str
 
     def user_id_login(self):
@@ -473,14 +474,14 @@ class AzureVMs():
                 self.create_public_ip()
                 self.create_nic()
                 self.create_vm_from_image()
-                time.sleep(120)
+                time.sleep(30)
                 self.get_public_ip()
 
             elif not self.virtual_machine_source_image:
                 self.create_public_ip()
                 self.create_nic()
                 self.create_vm()
-                time.sleep(120)
+                time.sleep(30)
                 self.get_public_ip()
 
             else:
