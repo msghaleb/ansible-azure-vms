@@ -22,10 +22,11 @@
 - name: provision | Waiting for winrm port to open
   wait_for:
     port="{{ ansible_ssh_port | default('5986') }}"
-    host="{{ azure_vms.public_dns_name }}"
+    host="{{ azure_vms.public_ip_address }}"
     delay=1
     timeout=2200
 
 - name: provision | set facts for ansible_ssh_host
   set_fact:
-        ansible_ssh_host: "{{ azure_vms.public_dns_name }}"
+        ansible_ssh_host: "{{ azure_vms.public_ip_address }}"
+        public_dns_name:  "{{ azure_vms.public_dns_name }}"
