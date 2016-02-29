@@ -384,9 +384,9 @@ class AzureVMs():
             response_code = err.getcode()
             response_msg = err.read()
             response_json = json.loads(response_msg)
-            if response_json.get("error", False) and "is already used by another public IP" in response_json.get("error").get("message",{}):#.get("value"):
+            if response_json.get("error", False) and "is already used by another public IP" in response_json.get("error").get("message",{}): #.get("value"):
                 #self.module.exit_json(msg="The Public IP Address is already used by another public IP.", changed=False)
-                
+                return None
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the Public IP Address. Error code='{}' msg='{}'".format(response_code, error_msg))
