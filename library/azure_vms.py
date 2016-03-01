@@ -6,7 +6,7 @@ DOCUMENTATION = '''
 module: azure_vms
 short_description: Create Azure VMs
 description:
-     - This Role allows you to create and delete role assignments
+     - This Role allows you to create and delete VMs
      - *** currently only supports users to be assigned to only resource groups
 version_added: "0.0.1"
 options:
@@ -19,14 +19,14 @@ options:
 
   state:
     description:
-      - Whether to create or delete an Azure role assignment.
+      - Whether to create or delete an Azure VM.
     required: false
     default: present
     choices: [ "present", "absent" ]
 
   resource_group_name:
     description:
-      - The Resource Group name to be set as the role assignment scope.
+      - The Resource Group name to be set as the VM scope.
       This is the object where the above user will be assigned permissions on.
     required: true
     default: null
@@ -290,11 +290,11 @@ class AzureVMs():
             response_code = err.getcode()
             response_msg = err.read()
             response_json = json.loads(response_msg)
-            if response_json.get("error", False) and "The role assignment already exists" in response_json.get("error").get("message",{}):#.get("value"):
+            if response_json.get("error", False) and "The VM already exists" in response_json.get("error").get("message",{}):#.get("value"):
                 self.module.exit_json(msg="The role assignment already exists.", changed=False)
             else:
                 error_msg = response_json.get("error").get("message")
-                self.module.fail_json(msg="Error happend while trying to create the role assignment. Error code='{}' msg='{}'".format(response_code, error_msg))
+                self.module.fail_json(msg="Error happend while trying to create the VM. Error code='{}' msg='{}'".format(response_code, error_msg))
         #self.module.exit_json(msg="The VM has been Created.", public_dns_name=self.public_dns_name, public_ip_address=self.public_ip_address, changed=True)
 
     def create_vm(self, image=None):
@@ -356,7 +356,7 @@ class AzureVMs():
             response_msg = err.read()
             response_json = json.loads(response_msg)
             if response_json.get("error", False) and "The VM already exists" in response_json.get("error").get("message",{}):#.get("value"):
-                self.module.exit_json(msg="The role assignment already exists.", changed=False)
+                self.module.exit_json(msg="The VM already exists.", changed=False)
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the VM. Error code='{}' msg='{}'".format(response_code, error_msg))
@@ -458,7 +458,7 @@ class AzureVMs():
             response_msg = err.read()
             response_json = json.loads(response_msg)
             if response_json.get("error", False) and "The NIC already exists" in response_json.get("error").get("message",{}):#.get("value"):
-                self.module.exit_json(msg="The role assignment already exists.", changed=False)
+                self.module.exit_json(msg="The NIC already exists.", changed=False)
             else:
                 error_msg = response_json.get("error").get("message")
                 self.module.fail_json(msg="Error happend while trying to create the VM NIC. Error code='{}' msg='{}'".format(response_code, error_msg))
