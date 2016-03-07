@@ -15,6 +15,7 @@
       subscription_id                 : "{{ azure_vms_subscription_id }}"
       client_id                       : "{{ azure_vms_client_id }}" #e.g. 6359f1g62-6543-6789-124f-398763x98112
       client_secret                   : "{{ azure_vms_client_secret }}" #e.g. HhCDbhsjkuHGiNhe+RE4aQsdjjrdof8cSd/q8F/iEDhx=
+      virtual_machine_size            : "{{ azure_vms_virtual_machine_size }}"
   register: azure_vms
 
 #- debug: var=azure_vms
