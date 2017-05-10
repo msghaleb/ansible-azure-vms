@@ -544,6 +544,7 @@ import json
 import urllib
 import uuid
 import time
+import urllib2
 
 # import module snippets
 from ansible.module_utils.basic import *
